@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/markasaicharan/chronos/internal/worker"
 	"github.com/markasaicharan/chronos/pkg/eventstore"
 	"github.com/markasaicharan/chronos/pkg/queue"
@@ -25,19 +27,19 @@ func main() {
 
 	store, err := eventstore.NewPostgresStore(dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to Postgres: %v", err)
+		log.Fatal("Failed to connect to Postgres", "error", err)
 	}
 
 	q, err := queue.NewRedisQueue(redisAddr, "", 0)
 	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		log.Fatal("Failed to connect to Redis", "error", err)
 	}
 
 	w := worker.NewWorker(store, q)
 
 	w.RegisterActivity("charge_customer", func(ctx context.Context, payload []byte) ([]byte, error) {
-		log.Printf("Executing charge_customer with payload: %s\n", string(payload))
-		
+		log.Info("Executing charge_customer", "payload", string(payload))
+
 		// Simulate a flaky network that fails 70% of the time to demonstrate the Retry & DLQ engine
 		if time.Now().UnixNano()%10 < 7 {
 			return nil, fmt.Errorf("connection reset by peer (simulated stripe failure)")
@@ -54,7 +56,7 @@ func main() {
 
 	go func() {
 		<-sigChan
-		log.Println("Received termination signal, initiating graceful shutdown...")
+		log.Info("Received termination signal, initiating graceful shutdown...")
 		cancel()
 	}()
 

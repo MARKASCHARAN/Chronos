@@ -3,9 +3,9 @@ package worker
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
 	"github.com/markasaicharan/chronos/internal/domain"
 	"github.com/markasaicharan/chronos/pkg/eventstore"
@@ -40,7 +40,7 @@ func (w *Worker) RegisterActivity(taskType string, activity Activity) {
 
 // Start begins the infinite polling loop for this worker node.
 func (w *Worker) Start(ctx context.Context) {
-	log.Printf("[%s] Worker online and polling Redis for tasks...\n", w.id)
+	log.Info("Worker online and polling Redis for tasks...", "worker_id", w.id)
 
 	for {
 		select {
@@ -50,7 +50,7 @@ func (w *Worker) Start(ctx context.Context) {
 		default:
 			task, err := w.queue.Pop(ctx)
 			if err != nil {
-				log.Printf("[%s] Error popping task: %v\n", w.id, err)
+				log.Error("Error popping task", "worker_id", w.id, "error", err)
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -66,27 +66,26 @@ func (w *Worker) Start(ctx context.Context) {
 
 // processTask handles the core execution logic.
 func (w *Worker) processTask(ctx context.Context, task *queue.Task) {
-	log.Printf("[%s] Claimed task: %s for Workflow: %s\n", w.id, task.TaskType, task.WorkflowID)
+	log.Info("Claimed task", "worker_id", w.id, "task_type", task.TaskType, "workflow_id", task.WorkflowID)
 
 	activity, exists := w.activities[task.TaskType]
 	if !exists {
-		log.Printf("[%s] Unknown activity type: %s\n", w.id, task.TaskType)
+		log.Error("Unknown activity type", "worker_id", w.id, "task_type", task.TaskType)
 		return
 	}
 
 	resultPayload, err := activity(ctx, task.Payload)
 	if err != nil {
-		log.Printf("[%s] Activity %s failed (Attempt %d): %v\n", w.id, task.TaskType, task.RetryCount+1, err)
-		
+		log.Warn("Activity failed", "worker_id", w.id, "task_type", task.TaskType, "attempt", task.RetryCount+1, "error", err)
+
 		task.RetryCount++
 		if task.RetryCount < 3 {
-			log.Printf("[%s] Re-queuing task %s for retry...\n", w.id, task.ID)
-			// Small delay before retry could be added here in a real system
+			log.Info("Re-queuing task for retry...", "worker_id", w.id, "task_id", task.ID)
 			_ = w.queue.Push(ctx, *task)
 			return
 		}
 
-		log.Printf("[%s] 🚨 Task %s exceeded max retries. Moving to DLQ.\n", w.id, task.ID)
+		log.Error("Task exceeded max retries. Moving to DLQ.", "worker_id", w.id, "task_id", task.ID)
 		_ = w.queue.PushDLQ(ctx, *task)
 
 		failedEvent := domain.Event{
@@ -109,9 +108,9 @@ func (w *Worker) processTask(ctx context.Context, task *queue.Task) {
 	}
 
 	if err := w.store.SaveEvent(ctx, completedEvent); err != nil {
-		log.Printf("[%s] CRITICAL: Failed to save event to Postgres: %v\n", w.id, err)
+		log.Fatal("Failed to save event to Postgres", "worker_id", w.id, "error", err)
 		return
 	}
 
-	log.Printf("[%s] ✅ Task completed & event persisted (Workflow: %s)\n", w.id, task.WorkflowID)
+	log.Info("Task completed & event persisted", "worker_id", w.id, "workflow_id", task.WorkflowID)
 }
