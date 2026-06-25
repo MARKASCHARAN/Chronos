@@ -8,7 +8,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const defaultQueueName = "chronos:tasks"
+const (
+	defaultQueueName = "chronos:tasks"
+	dlqName          = "chronos:tasks:dlq"
+)
 
 // RedisQueue implements the Queue interface using Redis.
 type RedisQueue struct {
@@ -44,6 +47,20 @@ func (q *RedisQueue) Push(ctx context.Context, task Task) error {
 
 	if err := q.client.LPush(ctx, q.queueName, data).Err(); err != nil {
 		return fmt.Errorf("failed to push task to redis: %w", err)
+	}
+
+	return nil
+}
+
+// PushDLQ implements the Queue interface by pushing irrecoverable tasks to a Dead Letter Queue.
+func (q *RedisQueue) PushDLQ(ctx context.Context, task Task) error {
+	data, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("failed to serialize task for DLQ: %w", err)
+	}
+
+	if err := q.client.LPush(ctx, dlqName, data).Err(); err != nil {
+		return fmt.Errorf("failed to push task to DLQ redis: %w", err)
 	}
 
 	return nil

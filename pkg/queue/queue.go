@@ -10,10 +10,12 @@ type Task struct {
 	WorkflowID string
 	TaskType   string
 	Payload    []byte
+	RetryCount int
 }
 
 // Queue defines the interface for our distributed task queue.
 type Queue interface {
 	Push(ctx context.Context, task Task) error
+	PushDLQ(ctx context.Context, task Task) error
 	Pop(ctx context.Context) (*Task, error)
 }

@@ -44,7 +44,7 @@ func (o *Orchestrator) StartWorkflow(ctx context.Context, name string, payload [
 	task := queue.Task{
 		ID:         uuid.New().String(),
 		WorkflowID: workflowID,
-		TaskType:   "ProcessWorkflow",
+		TaskType:   "charge_customer",
 		Payload:    payload,
 	}
 

@@ -35,6 +35,17 @@ func main() {
 
 	w := worker.NewWorker(store, q)
 
+	w.RegisterActivity("charge_customer", func(ctx context.Context, payload []byte) ([]byte, error) {
+		log.Printf("Executing charge_customer with payload: %s\n", string(payload))
+		
+		// Simulate a flaky network that fails 70% of the time to demonstrate the Retry & DLQ engine
+		if time.Now().UnixNano()%10 < 7 {
+			return nil, fmt.Errorf("connection reset by peer (simulated stripe failure)")
+		}
+
+		return []byte(`{"status": "charged", "transaction_id": "tx_999"}`), nil
+	})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

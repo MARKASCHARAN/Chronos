@@ -66,6 +66,29 @@ func main() {
 		})
 	})
 
+	http.HandleFunc("/workflow/history", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		workflowID := r.URL.Query().Get("id")
+		if workflowID == "" {
+			http.Error(w, "Missing workflow id", http.StatusBadRequest)
+			return
+		}
+
+		events, err := store.GetEvents(context.Background(), workflowID)
+		if err != nil {
+			log.Printf("Failed to get events: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(events)
+	})
+
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
