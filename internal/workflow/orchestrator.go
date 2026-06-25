@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/markasaicharan/chronos/internal/domain"
 	"github.com/markasaicharan/chronos/pkg/eventstore"
 	"github.com/markasaicharan/chronos/pkg/queue"
 )
 
 // Orchestrator coordinates the execution of workflows.
-// It acts as the brain, bridging the Event Store and the Task Queue.
 type Orchestrator struct {
 	store eventstore.Store
 	queue queue.Queue
@@ -26,15 +26,13 @@ func NewOrchestrator(store eventstore.Store, q queue.Queue) *Orchestrator {
 }
 
 // StartWorkflow initiates a new workflow.
-// It records the exact starting event in PostgreSQL, then pushes the initial
-// task to Redis so the worker cluster can pick it up.
 func (o *Orchestrator) StartWorkflow(ctx context.Context, name string, payload []byte) (string, error) {
 	workflowID := uuid.New().String()
 
-	startedEvent := Event{
+	startedEvent := domain.Event{
 		ID:         uuid.New().String(),
 		WorkflowID: workflowID,
-		EventType:  EventTypeWorkflowStarted,
+		EventType:  domain.EventTypeWorkflowStarted,
 		Payload:    payload,
 		Timestamp:  time.Now().UTC(),
 	}
@@ -46,7 +44,7 @@ func (o *Orchestrator) StartWorkflow(ctx context.Context, name string, payload [
 	task := queue.Task{
 		ID:         uuid.New().String(),
 		WorkflowID: workflowID,
-		TaskType:   "ProcessWorkflow", // A generic task instructing workers to evaluate the workflow state
+		TaskType:   "ProcessWorkflow",
 		Payload:    payload,
 	}
 

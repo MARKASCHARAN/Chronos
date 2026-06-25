@@ -42,7 +42,6 @@ func (q *RedisQueue) Push(ctx context.Context, task Task) error {
 		return fmt.Errorf("failed to serialize task: %w", err)
 	}
 
-	// LPush inserts the task at the head of the list
 	if err := q.client.LPush(ctx, q.queueName, data).Err(); err != nil {
 		return fmt.Errorf("failed to push task to redis: %w", err)
 	}
@@ -52,7 +51,6 @@ func (q *RedisQueue) Push(ctx context.Context, task Task) error {
 
 // Pop implements the Queue interface.
 func (q *RedisQueue) Pop(ctx context.Context) (*Task, error) {
-	// BRPop blocks until a task is available at the tail of the list
 	result, err := q.client.BRPop(ctx, 0, q.queueName).Result()
 	if err != nil {
 		if err == redis.Nil {

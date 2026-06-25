@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
-	"github.com/markasaicharan/chronos/internal/workflow"
+	"github.com/markasaicharan/chronos/internal/domain"
 )
 
 // PostgresStore implements the Store interface using PostgreSQL.
@@ -55,7 +55,7 @@ func (s *PostgresStore) createTables() error {
 }
 
 // SaveEvent implements the Store interface.
-func (s *PostgresStore) SaveEvent(ctx context.Context, event workflow.Event) error {
+func (s *PostgresStore) SaveEvent(ctx context.Context, event domain.Event) error {
 	query := `
 		INSERT INTO events (id, workflow_id, event_type, payload, timestamp)
 		VALUES ($1, $2, $3, $4, $5)
@@ -75,7 +75,7 @@ func (s *PostgresStore) SaveEvent(ctx context.Context, event workflow.Event) err
 }
 
 // GetEvents implements the Store interface.
-func (s *PostgresStore) GetEvents(ctx context.Context, workflowID string) ([]workflow.Event, error) {
+func (s *PostgresStore) GetEvents(ctx context.Context, workflowID string) ([]domain.Event, error) {
 	query := `
 		SELECT id, workflow_id, event_type, payload, timestamp 
 		FROM events 
@@ -88,9 +88,9 @@ func (s *PostgresStore) GetEvents(ctx context.Context, workflowID string) ([]wor
 	}
 	defer rows.Close()
 
-	var events []workflow.Event
+	var events []domain.Event
 	for rows.Next() {
-		var e workflow.Event
+		var e domain.Event
 		if err := rows.Scan(&e.ID, &e.WorkflowID, &e.EventType, &e.Payload, &e.Timestamp); err != nil {
 			return nil, fmt.Errorf("failed to scan event: %w", err)
 		}

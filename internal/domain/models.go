@@ -1,4 +1,4 @@
-package workflow
+package domain
 
 import (
 	"time"
@@ -18,7 +18,6 @@ const (
 )
 
 // Event represents a single state change in a workflow's lifecycle.
-// This is the core of our Event Sourcing engine.
 type Event struct {
 	ID         string
 	WorkflowID string
