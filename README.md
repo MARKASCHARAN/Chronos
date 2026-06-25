@@ -86,6 +86,46 @@ graph TD
 
 ---
 
+## 🛠️ Features Implemented (v1.0 MVP)
+
+- **Activity Registry:** Business logic is entirely decoupled from the engine. Define any Go function, use `RegisterActivity` to attach it to the worker, and the engine dynamically routes and executes it.
+- **Dead Letter Queue (DLQ) & Retry Engine:** Built-in fault tolerance. If an activity fails (e.g. simulated network timeout), the worker catches it, increments a retry counter, and re-queues it. After 3 consecutive failures, the task is safely quarantined in a Redis DLQ (`chronos:tasks:dlq`).
+- **The "Time Machine" API:** Because state is Event Sourced, you can hit `GET /workflow/history?id=<ID>` to receive a perfectly chronological, immutable audit log of every state change that ever happened to that workflow.
+
+---
+
+## 💻 Running It Locally
+
+You can run this entire distributed architecture locally with Docker:
+
+**1. Start Infrastructure (Postgres & Redis):**
+```bash
+docker compose up -d
+```
+
+**2. Start the Orchestrator API (Terminal 1):**
+```bash
+make run-server
+```
+
+**3. Start a Scalable Worker Node (Terminal 2):**
+```bash
+make run-worker
+```
+
+**4. Trigger a Workflow (Terminal 3):**
+```bash
+curl -X POST http://localhost:8080/workflow/start
+```
+
+**5. View the Immutable Audit Log:**
+```bash
+# Replace <ID> with the workflow_id returned from step 4
+curl "http://localhost:8080/workflow/history?id=<ID>"
+```
+
+---
+
 ## 🚀 What I Can Build Now
 Working on this project gave me hands-on experience to build:
 - **Fault-Tolerant Microservices:** Systems that gracefully survive network outages and node crashes.
