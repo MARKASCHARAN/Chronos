@@ -1,0 +1,23 @@
+# Binaries
+bin/
+chronos
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# Vendor directory
+vendor/
+
+# OS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
